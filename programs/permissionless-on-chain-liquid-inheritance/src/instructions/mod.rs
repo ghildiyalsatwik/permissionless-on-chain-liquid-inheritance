@@ -12,3 +12,6 @@ pub use flip_protocol::*;
 
 pub mod initialize_inheritance;
 pub use initialize_inheritance::*;
+
+pub mod check_in;
+pub use check_in::*;

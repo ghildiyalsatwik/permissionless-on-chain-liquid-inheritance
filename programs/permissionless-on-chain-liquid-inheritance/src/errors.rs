@@ -11,5 +11,11 @@ pub enum ProtocolError {
     #[msg("InvalidMintAccount")]
     InvalidMintAccount,
     #[msg("MathOverflow")]
-    MathOverflow
+    MathOverflow,
+    #[msg("TimeElapsed")]
+    TimeElapsed,
+    #[msg("InvalidMaker")]
+    InvalidMaker,
+    #[msg("InvalidTimestamp")]
+    InvalidTimestamp
 }

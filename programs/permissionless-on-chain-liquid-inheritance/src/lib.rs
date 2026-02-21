@@ -36,4 +36,9 @@ pub mod permissionless_on_chain_liquid_inheritance {
         ctx.accounts.initialize_inheritance(ctx.bumps, seed, inheritor, inheritance_amount, bounty_amount, inactivity_time)
 
     }
+
+    pub fn check_in(ctx: Context<CheckIn>) -> Result<()> {
+
+        ctx.accounts.check_in()
+    }
 }
