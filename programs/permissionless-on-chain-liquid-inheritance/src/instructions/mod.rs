@@ -9,3 +9,6 @@ pub use update_config_burned::*;
 
 pub mod flip_protocol;
 pub use flip_protocol::*;
+
+pub mod initialize_inheritance;
+pub use initialize_inheritance::*;

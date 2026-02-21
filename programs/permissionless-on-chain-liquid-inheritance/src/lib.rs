@@ -30,4 +30,10 @@ pub mod permissionless_on_chain_liquid_inheritance {
 
         ctx.accounts.flip_protocol()
     }
+
+    pub fn initialize_inheritance(ctx: Context<InitializeInheritance>, seed: u64, inheritor: Pubkey, inheritance_amount: u64, bounty_amount: u64, inactivity_time: u64) -> Result<()> {
+
+        ctx.accounts.initialize_inheritance(ctx.bumps, seed, inheritor, inheritance_amount, bounty_amount, inactivity_time)
+
+    }
 }

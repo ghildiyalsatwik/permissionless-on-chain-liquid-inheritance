@@ -5,5 +5,11 @@ pub enum ProtocolError {
     #[msg("InvalidAdmin")]
     InvalidAdmin,
     #[msg("ProtocolUnlocked")]
-    ProtocolUnlocked
+    ProtocolUnlocked,
+    #[msg("ProtocolLocked")]
+    ProtocolLocked,
+    #[msg("InvalidMintAccount")]
+    InvalidMintAccount,
+    #[msg("MathOverflow")]
+    MathOverflow
 }
