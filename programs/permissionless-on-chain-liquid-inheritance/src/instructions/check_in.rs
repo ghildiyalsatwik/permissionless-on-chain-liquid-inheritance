@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::state::Inheritance;
+use crate::state::{Inheritance, Config};
 use crate::errors::ProtocolError;
 
 #[derive(Accounts)]
@@ -16,6 +16,12 @@ pub struct CheckIn<'info> {
         bump = inheritance.bump
     )]
     pub inheritance: Account<'info, Inheritance>,
+    #[account(
+        seeds = [b"config"],
+        bump = config.bump,
+        constraint = config.locked == false @ ProtocolError::ProtocolLocked
+    )]
+    pub config: Account<'info, Config>,
     pub system_program: Program<'info, System>
 }
 
