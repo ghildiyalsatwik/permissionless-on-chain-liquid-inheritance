@@ -13,7 +13,8 @@ pub struct UpdateConfigFees<'info> {
     #[account(
         mut,
         seeds = [b"config"],
-        bump = config.bump
+        bump = config.bump,
+        constraint = config.locked == true @ ProtocolError::ProtocolUnlocked
     )]
     pub config: Account<'info, Config>,
     pub system_program: Program<'info, System>
