@@ -25,4 +25,9 @@ pub mod permissionless_on_chain_liquid_inheritance {
 
         ctx.accounts.update_config_burned(amount)
     }
+
+    pub fn flip_protocol(ctx: Context<FlipProtocol>) -> Result<()> {
+
+        ctx.accounts.flip_protocol()
+    }
 }

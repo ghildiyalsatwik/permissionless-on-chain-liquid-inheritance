@@ -43,7 +43,7 @@ impl<'info> InitializeAdmin<'info> {
 
     pub fn initialize_config(&mut self, bumps: InitializeAdminBumps, fees: u64) -> Result<()> {
 
-        self.config.set_inner(Config { fees: (fees), locked: (0), burned: (0), mint: (self.protocol_mint.key()), vault: (self.vault.key()), bump: (bumps.config) });
+        self.config.set_inner(Config { fees: (fees), amount_locked: (0), burned: (0), mint: (self.protocol_mint.key()), vault: (self.vault.key()), locked: false, bump: (bumps.config) });
 
         self.vault.set_inner(Vault {
 
