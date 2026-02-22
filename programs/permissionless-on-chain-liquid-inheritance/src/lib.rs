@@ -51,4 +51,24 @@ pub mod permissionless_on_chain_liquid_inheritance {
 
         ctx.accounts.reduce_inheritance(amount)
     }
+
+    pub fn increase_inheritance(ctx: Context<IncreaseInheritance>, amount: u64) -> Result<()> {
+
+        ctx.accounts.increase_inheritance(amount)
+    }
+
+    pub fn increase_inheritance_bounty(ctx: Context<IncreaseInheritanceBounty>, bounty_amount: u64) -> Result<()> {
+
+        ctx.accounts.increase_inheritance_bounty(bounty_amount)
+    }
+
+    pub fn change_inheritor(ctx: Context<ChangeInheritor>, inheritor: Pubkey) -> Result<()> {
+
+        ctx.accounts.change_inheritor(inheritor)
+    }
+
+    pub fn change_inactivity_time(ctx: Context<ChangeInactivityTime>, inactivity_time: u64) -> Result<()> {
+
+        ctx.accounts.change_inactivity_time(inactivity_time)
+    }
 }

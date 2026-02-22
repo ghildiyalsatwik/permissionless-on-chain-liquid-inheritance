@@ -61,6 +61,8 @@ impl<'info> ReduceInheritance<'info> {
             return err!(ProtocolError::TimeElapsed);
         };
 
+        self.inheritance.last_check_in = now;
+
         let tokens_to_burn = Inheritance::calculate_tokens_to_burn(amount, self.config.amount_locked, self.protocol_mint.supply)?;
 
         let shares_minted = self.inheritance.shares;

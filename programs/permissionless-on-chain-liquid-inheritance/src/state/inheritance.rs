@@ -5,7 +5,6 @@ use crate::errors::ProtocolError;
 #[account]
 #[derive(InitSpace)]
 pub struct Inheritance {
-
     pub maker: Pubkey,
     pub seed: u64,
     pub inheritor: Pubkey,
@@ -15,7 +14,6 @@ pub struct Inheritance {
     pub last_check_in: u64,
     pub shares: u64,
     pub bump: u8
-
 }
 
 impl Inheritance {

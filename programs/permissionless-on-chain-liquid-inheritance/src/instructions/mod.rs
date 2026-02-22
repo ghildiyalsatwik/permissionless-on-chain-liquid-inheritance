@@ -24,3 +24,12 @@ pub use reduce_inheritance::*;
 
 pub mod increase_inheritance;
 pub use increase_inheritance::*;
+
+pub mod increase_inheritance_bounty;
+pub use increase_inheritance_bounty::*;
+
+pub mod change_inheritor;
+pub use change_inheritor::*;
+
+pub mod change_inactivity_time;
+pub use change_inactivity_time::*;
