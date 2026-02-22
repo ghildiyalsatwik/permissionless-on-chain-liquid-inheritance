@@ -76,4 +76,9 @@ pub mod permissionless_on_chain_liquid_inheritance {
 
         ctx.accounts.withraw_sol(amount)
     }
+
+    pub fn trigger_inheritance(ctx: Context<TriggerInheritance>) -> Result<()> {
+
+        ctx.accounts.trigger_inheritance()
+    }
 }

@@ -14,6 +14,8 @@ pub enum ProtocolError {
     MathOverflow,
     #[msg("TimeElapsed")]
     TimeElapsed,
+    #[msg("TimeNotElapsed")]
+    TimeNotElapsed,
     #[msg("InvalidMaker")]
     InvalidMaker,
     #[msg("InvalidTimestamp")]
@@ -25,5 +27,7 @@ pub enum ProtocolError {
     #[msg("NoSharesAvailable")]
     NoSharesAvailable,
     #[msg("InvalidState")]
-    InvalidState
+    InvalidState,
+    #[msg("InvalidInheritor")]
+    InvalidInheritor
 }

@@ -36,3 +36,6 @@ pub use change_inactivity_time::*;
 
 pub mod withdraw_sol;
 pub use withdraw_sol::*;
+
+pub mod trigger_inheritance;
+pub use trigger_inheritance::*;

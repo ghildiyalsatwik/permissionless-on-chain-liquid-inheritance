@@ -88,13 +88,15 @@ impl<'info> CloseInheritance<'info> {
 
         let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault", &[self.vault.bump]]];
 
+        let inheritance_bump = &self.inheritance.bump.to_le_bytes();
+
         let inheritance_maker_key = &self.inheritance.maker.key();
 
         let inheritance_inheritor_key = &self.inheritance.inheritor.key();
 
         let inheritance_account_seed = &self.inheritance.seed.to_le_bytes();
 
-        let inheritance_signer_seeds: &[&[&[u8]]] = &[&[b"inheritance", inheritance_maker_key.as_ref(), inheritance_inheritor_key.as_ref(), inheritance_account_seed.as_ref(), &[self.inheritance.bump]]];
+        let inheritance_signer_seeds: &[&[&[u8]]] = &[&[b"inheritance", inheritance_maker_key.as_ref(), inheritance_inheritor_key.as_ref(), inheritance_account_seed.as_ref()], &[inheritance_bump.as_ref()]];
 
         let cpi_program_1 = self.token_program.to_account_info();
 
