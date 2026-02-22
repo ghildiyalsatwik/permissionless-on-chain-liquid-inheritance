@@ -41,4 +41,17 @@ impl Inheritance {
         Ok(assets as u64)
 
     }
+
+    pub fn calculate_tokens_to_burn(lamports_to_remove: u64, total_assets: u64, total_shares: u64) -> Result<u64> {
+
+        require!(total_assets > 0, ProtocolError::InvalidState);
+
+        require!(total_shares > 0, ProtocolError::InvalidState);
+
+        let shares = (lamports_to_remove as u128).checked_mul(total_shares as u128).ok_or(ProtocolError::MathOverflow)?
+        .checked_div(total_assets as u128).ok_or(ProtocolError::MathOverflow)?;
+
+        Ok(shares as u64)
+
+    }
 }

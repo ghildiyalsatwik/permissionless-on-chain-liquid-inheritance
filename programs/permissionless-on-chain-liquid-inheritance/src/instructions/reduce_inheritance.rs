@@ -1,10 +1,10 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, TokenAccount, Burn, burn}, token_2022::Token2022};
+use anchor_spl::{token::{Mint, TokenAccount}, associated_token::AssociatedToken, token_2022::{Token2022, burn, Burn}};
 
-use crate::{errors::ProtocolError, state::{Config, Inheritance, Vault}};
+use crate::{errors::ProtocolError, state::{Config, Vault, Inheritance}};
 
 #[derive(Accounts)]
-pub struct CloseInheritance<'info> {
+pub struct ReduceInheritance<'info> {
     #[account(
         mut,
         address = inheritance.maker.key() @ ProtocolError::InvalidMaker
@@ -37,7 +37,6 @@ pub struct CloseInheritance<'info> {
     pub vault: Account<'info, Vault>,
     #[account(
         mut,
-        close = maker,
         seeds = [b"inheritance", maker.key().as_ref(), inheritance.inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
         bump = inheritance.bump
     )]
@@ -47,9 +46,9 @@ pub struct CloseInheritance<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>
 }
 
-impl<'info> CloseInheritance<'info> {
+impl<'info> ReduceInheritance<'info> {
 
-    pub fn close_inheritance(&mut self) -> Result<()> {
+    pub fn reduce_inheritance(&mut self, amount: u64) -> Result<()> {
 
         let now = Clock::get()?.unix_timestamp as u64;
 
@@ -62,7 +61,19 @@ impl<'info> CloseInheritance<'info> {
             return err!(ProtocolError::TimeElapsed);
         };
 
+        let tokens_to_burn = Inheritance::calculate_tokens_to_burn(amount, self.config.amount_locked, self.protocol_mint.supply)?;
+
         let shares_minted = self.inheritance.shares;
+
+        if tokens_to_burn > shares_minted {
+
+            return err!(ProtocolError::InvalidTokenAmount);
+        }
+
+        if tokens_to_burn == shares_minted {
+
+            return err!(ProtocolError::InvalidInstruction);
+        }
 
         let shares_available = self.maker_ata.amount;
 
@@ -71,32 +82,16 @@ impl<'info> CloseInheritance<'info> {
             return err!(ProtocolError::NoSharesAvailable);
         };
 
-        let tokens_to_burn: u64;
+        if tokens_to_burn > shares_available {
 
-        if shares_available >= shares_minted {
-
-            tokens_to_burn = shares_minted;
-        
-        } else {
-
-            tokens_to_burn = shares_available;
+            return err!(ProtocolError::InvalidTokenAmount);
         }
 
-        let lamports_to_return = Inheritance::calculate_lamports_to_return(tokens_to_burn, self.config.amount_locked, self.config.amount_locked - self.config.burned)?;
-
-        let config_signer_seeds: &[&[&[u8]]] = &[&[b"config", &[self.config.bump]]];
-
-        let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault", &[self.vault.bump]]];
-
-        let inheritance_maker_key = &self.inheritance.maker.key();
-
-        let inheritance_inheritor_key = &self.inheritance.inheritor.key();
-
-        let inheritance_account_seed = &self.inheritance.seed.to_le_bytes();
-
-        let inheritance_signer_seeds: &[&[&[u8]]] = &[&[b"inheritance", inheritance_maker_key.as_ref(), inheritance_inheritor_key.as_ref(), inheritance_account_seed.as_ref(), &[self.inheritance.bump]]];
-
         let cpi_program_1 = self.token_program.to_account_info();
+
+        let config_bump = &self.config.bump.to_le_bytes();
+
+        let config_signer_seeds: &[&[&[u8]]]= &[&[b"config"], &[config_bump.as_ref()]];
 
         let cpi_accounts_1 = Burn {
 
@@ -109,32 +104,25 @@ impl<'info> CloseInheritance<'info> {
 
         burn(cpi_ctx_1, tokens_to_burn)?;
 
+        let vault_bump = &self.vault.bump.to_le_bytes();
+
+        let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault"], &[vault_bump.as_ref()]];
+
         let cpi_program_2 = self.system_program.to_account_info();
 
         let cpi_accounts_2 = Transfer {
 
             from: self.vault.to_account_info(),
-            to: self.maker.to_account_info()
+            to: self.maker.to_account_info(),
         };
 
         let cpi_ctx_2 = CpiContext::new_with_signer(cpi_program_2, cpi_accounts_2, vault_signer_seeds);
 
-        transfer(cpi_ctx_2, lamports_to_return)?;
+        transfer(cpi_ctx_2, amount)?;
 
-        let cpi_program_3 = self.system_program.to_account_info();
+        self.inheritance.inheritance_amount -= amount;
 
-        let cpi_accounts_3 = Transfer {
-
-            from: self.inheritance.to_account_info(),
-
-            to: self.maker.to_account_info()
-        };
-
-        let cpi_ctx_3 = CpiContext::new_with_signer(cpi_program_3, cpi_accounts_3, inheritance_signer_seeds);
-
-        transfer(cpi_ctx_3, self.inheritance.bounty_amount)?;
-
-        self.config.amount_locked -= lamports_to_return;
+        self.config.amount_locked -= amount;
 
         Ok(())
     }

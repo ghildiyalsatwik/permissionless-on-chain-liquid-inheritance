@@ -17,5 +17,13 @@ pub enum ProtocolError {
     #[msg("InvalidMaker")]
     InvalidMaker,
     #[msg("InvalidTimestamp")]
-    InvalidTimestamp
+    InvalidTimestamp,
+    #[msg("InvalidTokenAmount")]
+    InvalidTokenAmount,
+    #[msg("InvalidInstruction")]
+    InvalidInstruction,
+    #[msg("NoSharesAvailable")]
+    NoSharesAvailable,
+    #[msg("InvalidState")]
+    InvalidState
 }

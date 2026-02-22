@@ -18,3 +18,9 @@ pub use check_in::*;
 
 pub mod close_inheritance;
 pub use close_inheritance::*;
+
+pub mod reduce_inheritance;
+pub use reduce_inheritance::*;
+
+pub mod increase_inheritance;
+pub use increase_inheritance::*;

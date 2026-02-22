@@ -46,4 +46,9 @@ pub mod permissionless_on_chain_liquid_inheritance {
 
         ctx.accounts.close_inheritance()
     }
+
+    pub fn reduce_inheritance(ctx: Context<ReduceInheritance>, amount: u64) -> Result<()> {
+
+        ctx.accounts.reduce_inheritance(amount)
+    }
 }
