@@ -71,4 +71,9 @@ pub mod permissionless_on_chain_liquid_inheritance {
 
         ctx.accounts.change_inactivity_time(inactivity_time)
     }
+
+    pub fn withdraw_sol(ctx: Context<WithdrawSol>, amount: u64) -> Result<()> {
+
+        ctx.accounts.withraw_sol(amount)
+    }
 }

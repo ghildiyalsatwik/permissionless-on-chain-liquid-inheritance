@@ -37,7 +37,6 @@ impl Inheritance {
         .checked_div(total_shares as u128).ok_or(ProtocolError::MathOverflow)?;
 
         Ok(assets as u64)
-
     }
 
     pub fn calculate_tokens_to_burn(lamports_to_remove: u64, total_assets: u64, total_shares: u64) -> Result<u64> {
