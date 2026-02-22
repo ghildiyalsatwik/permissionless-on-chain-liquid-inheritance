@@ -15,3 +15,6 @@ pub use initialize_inheritance::*;
 
 pub mod check_in;
 pub use check_in::*;
+
+pub mod close_inheritance;
+pub use close_inheritance::*;

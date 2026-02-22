@@ -41,4 +41,9 @@ pub mod permissionless_on_chain_liquid_inheritance {
 
         ctx.accounts.check_in()
     }
+
+    pub fn close_inheritance(ctx: Context<CloseInheritance>) -> Result<()> {
+
+        ctx.accounts.close_inheritance()
+    }
 }

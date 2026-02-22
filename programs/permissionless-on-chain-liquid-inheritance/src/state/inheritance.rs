@@ -13,6 +13,7 @@ pub struct Inheritance {
     pub bounty_amount: u64,
     pub inactivity_time: u64,
     pub last_check_in: u64,
+    pub shares: u64,
     pub bump: u8
 
 }
@@ -38,6 +39,6 @@ impl Inheritance {
         .checked_div(total_shares as u128).ok_or(ProtocolError::MathOverflow)?;
 
         Ok(assets as u64)
-        
+
     }
 }

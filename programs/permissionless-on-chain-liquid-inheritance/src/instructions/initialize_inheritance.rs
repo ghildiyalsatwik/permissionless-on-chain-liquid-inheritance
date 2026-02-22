@@ -53,8 +53,6 @@ impl<'info> InitializeInheritance <'info> {
 
         let now = Clock::get()?.unix_timestamp as u64;
 
-        self.inheritance.set_inner(Inheritance { maker: (self.maker.key()), seed, inheritor, inheritance_amount, bounty_amount, inactivity_time, last_check_in: (now), bump: (bumps.inheritance) });
-
         let cpi_program_1 = self.system_program.to_account_info();
 
         let cpi_1_accounts = Transfer {
@@ -100,6 +98,8 @@ impl<'info> InitializeInheritance <'info> {
         let cpi_3_ctx = CpiContext::new_with_signer(cpi_program_3, cpi_3_accounts, signer_seeds);
 
         let mint_amount = Inheritance::calculate_token_to_mint(inheritance_amount, amount_locked_before, self.config.amount_locked - self.config.burned)?;
+
+        self.inheritance.set_inner(Inheritance { maker: (self.maker.key()), seed, inheritor, inheritance_amount, bounty_amount, inactivity_time, last_check_in: (now), shares: (mint_amount), bump: (bumps.inheritance) });
 
         mint_to(cpi_3_ctx, mint_amount)?;
 
