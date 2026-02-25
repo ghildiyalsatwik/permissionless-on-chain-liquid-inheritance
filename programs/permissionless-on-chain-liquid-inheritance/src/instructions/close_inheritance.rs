@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, TokenAccount, Burn, burn}, token_2022::Token2022};
+use anchor_spl::{associated_token::AssociatedToken, token::{Mint, TokenAccount}, token_2022::{Token2022, Burn, burn}};
 
 use crate::{errors::ProtocolError, state::{Config, Inheritance, Vault}};
 
