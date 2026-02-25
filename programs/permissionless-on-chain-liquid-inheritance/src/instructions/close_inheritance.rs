@@ -82,7 +82,7 @@ impl<'info> CloseInheritance<'info> {
             tokens_to_burn = shares_available;
         }
 
-        let lamports_to_return = Inheritance::calculate_lamports_to_return(tokens_to_burn, self.config.amount_locked, self.config.amount_locked - self.config.burned)?;
+        let lamports_to_return = Inheritance::calculate_lamports_to_return(tokens_to_burn, self.config.amount_locked, self.protocol_mint.supply)?;
 
         let config_signer_seeds: &[&[&[u8]]] = &[&[b"config", &[self.config.bump]]];
 
