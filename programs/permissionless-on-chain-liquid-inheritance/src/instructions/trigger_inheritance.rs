@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
 use anchor_spl::{associated_token::AssociatedToken, token::{Mint, TokenAccount}, token_2022::{Burn, Token2022, burn}};
 
-use crate::{errors::ProtocolError, state::{Config, Inheritance, Vault}};
+use crate::{errors::ProtocolError, state::{Config, Inheritance, Vault}, program::PermissionlessOnChainLiquidInheritance};
 
 #[derive(Accounts)]
 pub struct TriggerInheritance<'info> {
@@ -24,6 +24,11 @@ pub struct TriggerInheritance<'info> {
         associated_token::authority = maker
     )]
     pub maker_ata: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        constraint = this_program.programdata_address()? == Some(admin.key()) @ ProtocolError::InvalidAdmin
+    )]
+    pub admin: SystemAccount<'info>,
     #[account(
         mut,
         seeds = [b"mint"],
@@ -53,7 +58,8 @@ pub struct TriggerInheritance<'info> {
     pub inheritance: Account<'info, Inheritance>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token2022>,
-    pub associated_token: Program<'info, AssociatedToken>
+    pub associated_token: Program<'info, AssociatedToken>,
+    pub this_program: Program<'info, PermissionlessOnChainLiquidInheritance>,
 }
 
 impl<'info> TriggerInheritance<'info> {
@@ -87,6 +93,11 @@ impl<'info> TriggerInheritance<'info> {
         }
 
         let lamports_to_transfer = Inheritance::calculate_lamports_to_return(final_shares, self.config.amount_locked, self.protocol_mint.supply)?;
+
+        let fee_amount = (lamports_to_transfer as u128).checked_mul(self.config.fees as u128).ok_or(ProtocolError::MathOverflow)?
+        .checked_div(10_000u128).ok_or(ProtocolError::MathOverflow)? as u64;
+
+        let final_amount = lamports_to_transfer.checked_sub(fee_amount).ok_or(ProtocolError::MathOverflow)?;
 
         let cpi_program_1 = self.token_program.to_account_info();
 
@@ -129,7 +140,7 @@ impl<'info> TriggerInheritance<'info> {
 
         let cpi_ctx_2 = CpiContext::new_with_signer(cpi_program_2, cpi_accounts_2, vault_signer_seeds);
 
-        transfer(cpi_ctx_2, lamports_to_transfer)?;
+        transfer(cpi_ctx_2, final_amount)?;
 
         let cpi_program_3 = self.system_program.to_account_info();
 
@@ -142,6 +153,18 @@ impl<'info> TriggerInheritance<'info> {
         let cpi_ctx_3 = CpiContext::new_with_signer(cpi_program_3, cpi_accounts_3, inheritance_signer_seeds);
 
         transfer(cpi_ctx_3, self.inheritance.bounty_amount)?;
+
+        let cpi_program_4 = self.system_program.to_account_info();
+
+        let cpi_accounts_4 = Transfer {
+
+            from: self.vault.to_account_info(),
+            to: self.admin.to_account_info()
+        };
+
+        let cpi_ctx_4 = CpiContext::new_with_signer(cpi_program_4, cpi_accounts_4, vault_signer_seeds);
+
+        transfer(cpi_ctx_4, fee_amount)?;
 
         self.config.amount_locked -= lamports_to_transfer;
 
