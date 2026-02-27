@@ -23,6 +23,8 @@ pub struct InitializeInheritance<'info> {
     pub vault: Account<'info, Vault>,
     #[account(
         mut,
+        seeds = [b"mint"],
+        bump = config.mint_bump,
         address = config.mint @ ProtocolError::InvalidMintAccount
     )]
     pub protocol_mint: Account<'info, Mint>,

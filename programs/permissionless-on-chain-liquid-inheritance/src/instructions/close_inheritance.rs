@@ -19,6 +19,8 @@ pub struct CloseInheritance<'info> {
     pub maker_ata: Account<'info, TokenAccount>,
     #[account(
         mut,
+        seeds = [b"mint"],
+        bump = config.mint_bump,
         address = config.mint.key() @ ProtocolError::InvalidMintAccount
     )]
     pub protocol_mint: Account<'info, Mint>,
