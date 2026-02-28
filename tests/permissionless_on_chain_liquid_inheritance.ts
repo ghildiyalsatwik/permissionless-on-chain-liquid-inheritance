@@ -59,19 +59,28 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
     const data = programDataInfo.data;
 
-    const optionTag = data[16];
+    const optionTag = data[12];
 
     console.log(`Option Tag: ${optionTag}`);
 
     if(optionTag === 1) {
 
-      const upgradeAuthority = new PublicKey(data.slice(17, 49));
+      const upgradeAuthority = new PublicKey(data.slice(13, 45));
 
       console.log(`Upgrade Authority: ${upgradeAuthority.toBase58()}`);
+
+      if(upgradeAuthority.toBase58() === admin.publicKey.toBase58()) {
+
+        console.log("Program Data upgrade authority matches the admin from Anchor Provider");
+      
+      } else {
+
+        throw new Error("Program Data upgrade authority does not match the wallet from Anchor provider");
+      }
     
     } else {
 
-      console.log("No upgrade authority set.");
+      throw new Error("No upgrade authority set.");
     }
 
   });
@@ -100,6 +109,64 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
       programData,
       systemProgram: SystemProgram.programId,
       tokenProgram: TOKEN_2022_PROGRAM_ID
+    }).rpc().then(confirmTx);
+
+  });
+
+  it("Lock protocol", async () => {
+
+    const tx = await program.methods.flipProtocol().accountsStrict({
+      admin: admin.publicKey,
+      thisProgram: program.programId,
+      programData,
+      config,
+      systemProgram: SystemProgram.programId
+    }).rpc().then(confirmTx);
+
+  });
+
+  it("Update config fees", async () => {
+
+    const tx = await program.methods.updateConfigFees(new anchor.BN(200)).accountsStrict({
+      admin: admin.publicKey,
+      thisProgram: program.programId,
+      programData,
+      config,
+      systemProgram: SystemProgram.programId
+    }).rpc().then(confirmTx);
+
+  });
+
+  it("Update config burned", async () => {
+
+    const tx1 = await program.methods.updateConfigBurned(new anchor.BN(1_000_000_000)).accountsStrict({
+
+      admin: admin.publicKey,
+      thisProgram: program.programId,
+      programData,
+      config,
+      systemProgram: SystemProgram.programId
+    }).rpc().then(confirmTx);
+
+    const tx2 = await program.methods.updateConfigBurned(new anchor.BN(0)).accountsStrict({
+
+      admin: admin.publicKey,
+      thisProgram: program.programId,
+      programData,
+      config,
+      systemProgram: SystemProgram.programId
+    }).rpc().then(confirmTx);
+
+  });
+
+  it("Unlock protocol", async () => {
+
+    const tx = await program.methods.flipProtocol().accountsStrict({
+      admin: admin.publicKey,
+      thisProgram: program.programId,
+      programData,
+      config,
+      systemProgram: SystemProgram.programId
     }).rpc().then(confirmTx);
 
   });
