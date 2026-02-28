@@ -113,6 +113,46 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   });
 
+  it("Update config fees before lock", async () => {
+
+    try {
+      await program.methods.updateConfigFees(new anchor.BN(200)).accountsStrict({
+      admin: admin.publicKey,
+      thisProgram: program.programId,
+      programData,
+      config,
+      systemProgram: SystemProgram.programId
+    }).rpc().then(confirmTx);
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Protocol is unlocoked, should not be able to update config fees");
+
+  });
+
+  it("Update config burned before lock", async () => {
+
+    try {
+      
+      await program.methods.updateConfigBurned(new anchor.BN(1_000_000_000)).accountsStrict({
+
+      admin: admin.publicKey,
+      thisProgram: program.programId,
+      programData,
+      config,
+      systemProgram: SystemProgram.programId
+    }).rpc().then(confirmTx);
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Protocol is unlocoked, should not be able to update config burned");
+
+  });
+
   it("Lock protocol", async () => {
 
     const tx = await program.methods.flipProtocol().accountsStrict({
