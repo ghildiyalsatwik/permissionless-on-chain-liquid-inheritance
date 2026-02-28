@@ -7,7 +7,7 @@ use crate::{errors::ProtocolError, program::PermissionlessOnChainLiquidInheritan
 pub struct InitializeAdmin<'info> {
     #[account(
         mut,
-        constraint = this_program.programdata_address()? == Some(admin.key()) @ ProtocolError::InvalidAdmin
+        constraint = program_data.upgrade_authority_address == Some(admin.key()) @ ProtocolError::InvalidAdmin
     )]
     pub admin: Signer<'info>,
     #[account(
@@ -35,7 +35,11 @@ pub struct InitializeAdmin<'info> {
         bump
     )]
     pub vault: Account<'info, Vault>,
+    #[account(
+        constraint = this_program.programdata_address()? == Some(program_data.key()) @ ProtocolError::InvalidProgram 
+    )]
     pub this_program: Program<'info, PermissionlessOnChainLiquidInheritance>,
+    pub program_data: Account<'info, ProgramData>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token2022>
 
