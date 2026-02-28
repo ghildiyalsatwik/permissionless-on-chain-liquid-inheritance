@@ -1,12 +1,12 @@
 [package]
-name = "anchor-amm-q4-25"
+name = "permissionless-on-chain-liquid-inheritance"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "anchor_amm_q4_25"
+name = "permissionless_on_chain_liquid_inheritance"
 
 [features]
 default = []

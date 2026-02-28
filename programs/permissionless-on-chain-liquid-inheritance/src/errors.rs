@@ -30,6 +30,8 @@ pub enum ProtocolError {
     InvalidState,
     #[msg("InvalidInheritor")]
     InvalidInheritor,
-    #[msg("InvalidProgram")]
-    InvalidProgram
+    #[msg("InvalidProtocolProgram")]
+    InvalidProgram,
+    #[msg("InvalidTokenProgram")]
+    InvalidTokenProgram
 }

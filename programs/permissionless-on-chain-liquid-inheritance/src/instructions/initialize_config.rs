@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token::Mint, token_2022::Token2022};
+use anchor_spl::{token_2022::ID as TOKEN_2022_PROGRAM_ID, token_interface::{Mint, TokenInterface}};
 
 use crate::{errors::ProtocolError, program::PermissionlessOnChainLiquidInheritance, state::{Config, Vault}};
 
@@ -15,10 +15,11 @@ pub struct InitializeAdmin<'info> {
         payer = admin,
         mint::decimals = 9,
         mint::authority = config,
+        mint::token_program = token_program,
         seeds = [b"mint"],
         bump
     )]
-    pub protocol_mint: Account<'info, Mint>,
+    pub protocol_mint: InterfaceAccount<'info, Mint>,
     #[account(
         init,
         payer = admin,
@@ -41,7 +42,10 @@ pub struct InitializeAdmin<'info> {
     pub this_program: Program<'info, PermissionlessOnChainLiquidInheritance>,
     pub program_data: Account<'info, ProgramData>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token2022>
+    #[account(
+        constraint = token_program.key() == TOKEN_2022_PROGRAM_ID @ ProtocolError::InvalidTokenProgram
+    )]
+    pub token_program: Interface<'info, TokenInterface>
 
 }
 

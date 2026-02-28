@@ -5,7 +5,8 @@ mod instructions;
 mod state;
 
 use instructions::*;
-declare_id!("9FVkz5L9LZix4zXYmqJLzKBwRpm9aJ539J26UsZSrLWN");
+
+declare_id!("4VYBRHQHzTMU25YyJ3a1Rb3A6n5CRM3J98chDGYCMMjj");
 
 #[program]
 pub mod permissionless_on_chain_liquid_inheritance {
