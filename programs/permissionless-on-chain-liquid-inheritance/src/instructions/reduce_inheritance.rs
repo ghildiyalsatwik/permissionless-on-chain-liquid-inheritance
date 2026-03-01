@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
-use anchor_spl::{token::{Mint, TokenAccount}, associated_token::AssociatedToken, token_2022::{Token2022, burn, Burn}};
+use anchor_spl::{token_interface::{Mint, TokenAccount, TokenInterface}, associated_token::AssociatedToken, token_2022::{burn, Burn, ID as TOKEN_2022_PROGRAM_ID}};
 
 use crate::{errors::ProtocolError, state::{Config, Vault, Inheritance}};
 
@@ -16,14 +16,14 @@ pub struct ReduceInheritance<'info> {
         associated_token::token_program = token_program,
         associated_token::authority = maker
     )]
-    pub maker_ata: Account<'info, TokenAccount>,
+    pub maker_ata: InterfaceAccount<'info, TokenAccount>,
     #[account(
         mut,
         seeds = [b"mint"],
         bump = config.mint_bump,
         address = config.mint.key() @ ProtocolError::InvalidMintAccount
     )]
-    pub protocol_mint: Account<'info, Mint>,
+    pub protocol_mint: InterfaceAccount<'info, Mint>,
     #[account(
         mut,
         seeds = [b"config"],
@@ -44,7 +44,10 @@ pub struct ReduceInheritance<'info> {
     )]
     pub inheritance: Account<'info, Inheritance>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token2022>,
+    #[account(
+        constraint = token_program.key() == TOKEN_2022_PROGRAM_ID @ ProtocolError::InvalidTokenProgram     
+    )]
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>
 }
 

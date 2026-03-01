@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, TokenAccount}, token_2022::{Burn, Token2022, burn}};
+use anchor_spl::{associated_token::AssociatedToken, token_2022::{Burn, ID as TOKEN_2022_PROGRAM_ID, burn}, token_interface::{Mint, TokenAccount, TokenInterface}};
 
 use crate::{errors::ProtocolError, state::{Config, Inheritance, Vault}};
 
@@ -13,14 +13,14 @@ pub struct WithdrawSol<'info> {
         associated_token::token_program = token_program,
         associated_token::authority = withdrawer
     )]
-    pub withdrawer_ata: Account<'info, TokenAccount>,
+    pub withdrawer_ata: InterfaceAccount<'info, TokenAccount>,
     #[account(
         mut,
         seeds = [b"mint"],
         bump = config.mint_bump,
         address = config.mint.key() @ ProtocolError::InvalidMintAccount
     )]
-    pub protocol_mint: Account<'info, Mint>,
+    pub protocol_mint: InterfaceAccount<'info, Mint>,
     #[account(
         mut,
         seeds = [b"config"],
@@ -35,7 +35,10 @@ pub struct WithdrawSol<'info> {
     )]
     pub vault: Account<'info, Vault>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token2022>,
+    #[account(
+        constraint = token_program.key() == TOKEN_2022_PROGRAM_ID @ ProtocolError::InvalidTokenProgram
+    )]
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>
 }
 

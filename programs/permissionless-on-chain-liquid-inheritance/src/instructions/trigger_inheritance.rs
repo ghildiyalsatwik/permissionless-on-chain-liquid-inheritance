@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, TokenAccount}, token_2022::{Burn, Token2022, burn}};
+use anchor_spl::{associated_token::AssociatedToken, token_interface::{Mint, TokenAccount, TokenInterface}, token_2022::{Burn, burn, ID as TOKEN_2022_PROGRAM_ID}};
 
 use crate::{errors::ProtocolError, state::{Config, Inheritance, Vault}, program::PermissionlessOnChainLiquidInheritance};
 
@@ -23,10 +23,10 @@ pub struct TriggerInheritance<'info> {
         associated_token::token_program = token_program,
         associated_token::authority = maker
     )]
-    pub maker_ata: Account<'info, TokenAccount>,
+    pub maker_ata: InterfaceAccount<'info, TokenAccount>,
     #[account(
         mut,
-        constraint = this_program.programdata_address()? == Some(admin.key()) @ ProtocolError::InvalidAdmin
+        constraint = program_data.upgrade_authority_address == Some(admin.key()) @ ProtocolError::InvalidAdmin
     )]
     pub admin: SystemAccount<'info>,
     #[account(
@@ -35,7 +35,7 @@ pub struct TriggerInheritance<'info> {
         bump = config.mint_bump,
         address = config.mint.key() @ProtocolError::InvalidMintAccount
     )]
-    pub protocol_mint: Account<'info, Mint>,
+    pub protocol_mint: InterfaceAccount<'info, Mint>,
     #[account(
         mut,
         seeds = [b"vault"],
@@ -57,8 +57,15 @@ pub struct TriggerInheritance<'info> {
     )]
     pub inheritance: Account<'info, Inheritance>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token2022>,
+    #[account(
+        constraint = token_program.key() == TOKEN_2022_PROGRAM_ID @ ProtocolError::InvalidTokenProgram     
+    )]
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token: Program<'info, AssociatedToken>,
+    pub program_data: Account<'info, ProgramData>,
+    #[account(
+        constraint = this_program.programdata_address()? == Some(program_data.key()) @ ProtocolError::InvalidProgram 
+    )]
     pub this_program: Program<'info, PermissionlessOnChainLiquidInheritance>,
 }
 
