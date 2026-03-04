@@ -49,6 +49,10 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const maker = Keypair.generate();
 
+  const keeper = Keypair.generate();
+
+  const withdrawer = Keypair.generate();
+
   const inheritor1 = Keypair.generate();
 
   const inheritor2 = Keypair.generate();
@@ -129,7 +133,7 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   it("Airdrop", async () => {
 
-      await Promise.all([admin, maker].map(async (k) => {
+      await Promise.all([admin, maker, keeper, withdrawer].map(async (k) => {
 
         const sig = await anchor.getProvider().connection.requestAirdrop(k.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
 
@@ -506,6 +510,30 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
   }
 
   throw new Error("Should not be able to increase inheritance bounty for an inheritance where the timer has run out");
+
+  });
+
+  it("Trigger inheritance", async () => {
+
+    const tx = await program.methods.triggerInheritance().accountsStrict({
+
+      keeper: keeper.publicKey,
+      inheritor: inheritor2.publicKey,
+      maker: maker.publicKey,
+      makerAta: makerAta1,
+      admin: admin.publicKey,
+      protocolMint,
+      vault,
+      config,
+      inheritance: inheritancePDA3,
+      inheritanceVault: inheritanceVault3,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedToken: ASSOCIATED_TOKEN_PROGRAM_ID,
+      programData,
+      thisProgram: program.programId
+
+    }).signers([keeper]).rpc().then(confirmTx);
 
   });
 
