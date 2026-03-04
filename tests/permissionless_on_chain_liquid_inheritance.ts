@@ -359,4 +359,21 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   });
 
+  it("Close first inheritance", async () => {
+
+    const tx = await program.methods.closeInheritance().accountsStrict({
+      maker: maker.publicKey,
+      makerAta: makerAta1,
+      protocolMint: protocolMint,
+      config,
+      vault,
+      inheritance: inheritancePDA1,
+      inheritanceVault: inheritanceVault1,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
 });

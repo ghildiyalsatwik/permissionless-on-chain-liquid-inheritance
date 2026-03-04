@@ -158,7 +158,7 @@ impl<'info> CloseInheritance<'info> {
         let cpi_accounts_4 = Revoke {
 
             source: self.maker_ata.to_account_info(),
-            authority: self.config.to_account_info()
+            authority: self.maker.to_account_info()
         };
 
         let cpi_ctx_4 = CpiContext::new(cpi_program_4, cpi_accounts_4);
