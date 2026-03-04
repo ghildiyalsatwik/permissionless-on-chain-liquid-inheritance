@@ -61,7 +61,7 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const seed1 = new anchor.BN(0);
 
-  const seed2 = new anchor.BN(0);
+  const seed2 = new anchor.BN(1);
 
   const inactivityTime1 = new anchor.BN(60 * 60 * 24);
 
@@ -75,6 +75,8 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const inhertianceAmount1ToRemove = new anchor.BN(1_000_000_000);
 
+  const inhertianceAmount2ToRemove = new anchor.BN(500_000_000);
+
   const bountyAmount1 = new anchor.BN(100_000_000);
 
   const bountyAmount1New = new anchor.BN(200_000_000);
@@ -82,6 +84,10 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
   const inheritancePDA1 = PublicKey.findProgramAddressSync([Buffer.from("inheritance"), maker.publicKey.toBuffer(), inheritor1.publicKey.toBuffer(), seed1.toArrayLike(Buffer, "le", 8)], program.programId)[0];
 
   const inheritanceVault1 = PublicKey.findProgramAddressSync([Buffer.from("inheritance_vault"), inheritancePDA1.toBuffer()], program.programId)[0];
+
+  console.log(`Inheritance Vault Address of first inheritor: ${inheritanceVault1.toBase58()}`);
+
+  console.log(`Inheritance PDA address of the first inheritor: ${inheritancePDA1.toBase58()}`);
 
   const inheritancePDA2 = PublicKey.findProgramAddressSync([Buffer.from("inheritance"), maker.publicKey.toBuffer(), inheritor1.publicKey.toBuffer(), seed2.toArrayLike(Buffer, "le", 8)], program.programId)[0];
 
@@ -513,7 +519,83 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   });
 
-  it("Trigger inheritance", async () => {
+  it("Trying to increase inheritance amount for an inheritance where the timer has run out", async () => {
+
+    try {
+      
+      await program.methods.increaseInheritance(inheritanceAmount1ToAdd).accountsStrict({
+        maker: maker.publicKey,
+        makerAta: makerAta1,
+        protocolMint: protocolMint,
+        config,
+        vault,
+        inheritance: inheritancePDA3,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+      }).signers([maker]).rpc().then(confirmTx);
+
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Should not be able to increase inheritance amount for an inheritance where the timer has run out");
+
+  });
+
+  it("Trying to decrease inheritance amount for an inheritance where the timer has run out", async () => {
+
+    try {
+      
+      await program.methods.reduceInheritance(inhertianceAmount2ToRemove).accountsStrict({
+        maker: maker.publicKey,
+        makerAta: makerAta1,
+        protocolMint: protocolMint,
+        config,
+        vault,
+        inheritance: inheritancePDA3,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+      }).signers([maker]).rpc().then(confirmTx);
+
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Should not be able to decrease inheritance amount for an inheritance where the timer has run out");
+
+  });
+
+  it("Trying to close an inheritance where the timer has run out", async () => {
+
+    try {
+      
+      await program.methods.closeInheritance().accountsStrict({
+        maker: maker.publicKey,
+        makerAta: makerAta1,
+        protocolMint: protocolMint,
+        config,
+        vault,
+        inheritance: inheritancePDA3,
+        inheritanceVault: inheritanceVault3,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+      }).signers([maker]).rpc().then(confirmTx);
+
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Should not be able to close inheritance where the timer has run out");
+
+  });
+
+  it("Trigger valid inheritance", async () => {
 
     const tx = await program.methods.triggerInheritance().accountsStrict({
 
@@ -534,6 +616,59 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
       thisProgram: program.programId
 
     }).signers([keeper]).rpc().then(confirmTx);
+
+  });
+
+  it("Reopening closed inheritance", async () => {
+
+    //await new Promise((resolve) => setTimeout(resolve, 5000)); //added this delay to see if the account already exists error is due to trying to open account in the same slot as close.
+
+    const tx = await program.methods.initializeInheritance(seed1, inheritor1.publicKey, inheritanceAmount1, bountyAmount1, inactivityTime1)
+    .accountsStrict({
+      maker: maker.publicKey,
+      config,
+      vault,
+      protocolMint,
+      makerAta: makerAta1,
+      inheritance: inheritancePDA1,
+      inheritanceVault: inheritanceVault1,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
+  });
+
+  it("Trigger invalid inheritance", async () => {
+
+    try {
+
+      await program.methods.triggerInheritance().accountsStrict({
+
+        keeper: keeper.publicKey,
+        inheritor: inheritor1.publicKey,
+        maker: maker.publicKey,
+        makerAta: makerAta1,
+        admin: admin.publicKey,
+        protocolMint,
+        vault,
+        config,
+        inheritance: inheritancePDA1,
+        inheritanceVault: inheritanceVault1,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedToken: ASSOCIATED_TOKEN_PROGRAM_ID,
+        programData,
+        thisProgram: program.programId
+  
+      }).signers([keeper]).rpc().then(confirmTx);
+
+
+    } catch(err) {
+
+      return;
+    }
+
+    throw new Error("Should not be able to trigger an inheritance where the timer has not run out");
 
   });
 

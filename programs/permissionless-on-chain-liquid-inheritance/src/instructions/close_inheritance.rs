@@ -165,6 +165,34 @@ impl<'info> CloseInheritance<'info> {
 
         revoke(cpi_ctx_4)?;
 
+        // let cpi_program_5 = self.system_program.to_account_info();
+
+        // let cpi_accounts_5 = Transfer {
+
+        //     from: self.inheritance_vault.to_account_info(),
+        //     to: self.maker.to_account_info()
+        // };
+
+        // let inheritance_key = &self.inheritance.key();
+
+        // let inheritance_vault_signer_seeds: &[&[&[u8]]] = &[&[b"inheritance_vault", inheritance_key.as_ref(), &[self.inheritance.vault_bump]]];
+
+        // let cpi_ctx_5 = CpiContext::new_with_signer(cpi_program_5, cpi_accounts_5, inheritance_vault_signer_seeds);
+
+        // let rent = self.inheritance_vault.to_account_info().lamports();
+
+        // transfer(cpi_ctx_5, rent)?;
+
+        let vault_info = self.inheritance_vault.to_account_info();
+        
+        let maker_info = self.maker.to_account_info();
+
+        let rent = **vault_info.lamports.borrow();
+
+        **vault_info.lamports.borrow_mut() = 0;
+        
+        **maker_info.lamports.borrow_mut() += rent;
+
         self.config.amount_locked -= lamports_to_return;
 
         Ok(())

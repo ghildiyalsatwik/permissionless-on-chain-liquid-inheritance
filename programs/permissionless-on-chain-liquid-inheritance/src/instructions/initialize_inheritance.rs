@@ -99,7 +99,6 @@ impl<'info> InitializeInheritance <'info> {
             mint: self.protocol_mint.to_account_info(),
             to: self.maker_ata.to_account_info(),
             authority: self.config.to_account_info()
-
         };
 
         let bump = self.config.bump;

@@ -187,6 +187,34 @@ impl<'info> TriggerInheritance<'info> {
 
         transfer(cpi_ctx_4, fee_amount)?;
 
+        //let cpi_program_5 = self.system_program.to_account_info();
+
+        // let cpi_accounts_5 = Transfer {
+
+        //     from: self.inheritance_vault.to_account_info(),
+        //     to: self.keeper.to_account_info()
+        // };
+
+        // let inheritance_key = &self.inheritance.key();
+
+        // let inheritance_vault_signer_seeds: &[&[&[u8]]] = &[&[b"inheritance_vault", inheritance_key.as_ref(), &[self.inheritance.vault_bump]]];
+
+        // let cpi_ctx_5 = CpiContext::new_with_signer(cpi_program_5, cpi_accounts_5, inheritance_vault_signer_seeds);
+
+        // let rent = self.inheritance_vault.to_account_info().lamports();
+
+        // transfer(cpi_ctx_5, rent)?;
+
+        let vault_info = self.inheritance_vault.to_account_info();
+        
+        let keeper_info = self.keeper.to_account_info();
+
+        let rent = **vault_info.lamports.borrow();
+
+        **vault_info.lamports.borrow_mut() = 0;
+        
+        **keeper_info.lamports.borrow_mut() += rent;
+
         self.config.amount_locked -= lamports_to_transfer;
 
         Ok(())
