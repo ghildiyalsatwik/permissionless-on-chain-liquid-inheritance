@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PermissionlessOnChainLiquidInheritance } from "../target/types/permissionless_on_chain_liquid_inheritance";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import { TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddressSync, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddressSync, ASSOCIATED_TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 
 const confirmTx = async (signature: string): Promise<string> => {
 
@@ -59,9 +59,13 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const hackerInActivityTime = new anchor.BN(1);
 
+  const hackerWithdrawAmount = new anchor.BN(1_000_000_000);
+
   const inheritor1 = Keypair.generate();
 
   const inheritor2 = Keypair.generate();
+
+  const finalInheritor = Keypair.generate();
 
   const inheritor1New = Keypair.generate();
 
@@ -69,11 +73,15 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const seed2 = new anchor.BN(1);
 
+  const finalSeed = new anchor.BN(0);
+
   const inactivityTime1 = new anchor.BN(60 * 60 * 24);
 
   const inactivityTime2 = new anchor.BN(1);
 
   const inactivityTime1New = new anchor.BN(60 * 60 * 24 * 2);
+
+  const finalInActicityTime = new anchor.BN(10);
 
   const inheritanceAmount1 = new anchor.BN(1_000_000_000);
 
@@ -83,9 +91,13 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const inhertianceAmount2ToRemove = new anchor.BN(500_000_000);
 
+  const finalInheritanceAmount = new anchor.BN(5_000_000_000);
+
   const bountyAmount1 = new anchor.BN(100_000_000);
 
   const bountyAmount1New = new anchor.BN(200_000_000);
+
+  const finalBountyAmount = new anchor.BN(1_000_000_000);
 
   const inheritancePDA1 = PublicKey.findProgramAddressSync([Buffer.from("inheritance"), maker.publicKey.toBuffer(), inheritor1.publicKey.toBuffer(), seed1.toArrayLike(Buffer, "le", 8)], program.programId)[0];
 
@@ -103,7 +115,13 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const inheritanceVault3 = PublicKey.findProgramAddressSync([Buffer.from("inheritance_vault"), inheritancePDA3.toBuffer()], program.programId)[0];
 
+  const finalInheritancePDA = PublicKey.findProgramAddressSync([Buffer.from("inheritance"), maker.publicKey.toBuffer(), finalInheritor.publicKey.toBuffer(), finalSeed.toArrayLike(Buffer, "le", 8)], program.programId)[0];
+
+  const finalInheritanceVault = PublicKey.findProgramAddressSync([Buffer.from("inheritance_vault"), finalInheritancePDA.toBuffer()], program.programId)[0];
+
   const makerAta1 = getAssociatedTokenAddressSync(protocolMint, maker.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+
+  const hackerAta = getAssociatedTokenAddressSync(protocolMint, hacker.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 
   it("Program Data Account exists with upgrade authority", async () => {
 
@@ -754,6 +772,76 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
     }
 
     throw new Error("Should not be able to change inactivity time for someone else's inheritance.");
+
+  });
+
+  it("Hacker trying to increase inheritance bounty", async () => {
+
+    try {
+
+      await program.methods.increaseInheritanceBounty(bountyAmount1New).accountsStrict({
+        maker: maker.publicKey,
+        inheritanceVault: inheritanceVault3,
+        inheritance: inheritancePDA3,
+        config,
+        systemProgram: SystemProgram.programId
+      }).signers([hacker]).rpc().then(confirmTx);
+
+    } catch(err) {
+
+      return;
+    }
+
+    throw new Error("Hacker should not be able to increase inheritance bounty");
+
+  });
+
+  it("Hacker trying to withdraw without any balance in wallet", async () => {
+
+    try {
+
+      await program.methods.withdrawSol(hackerWithdrawAmount).accountsStrict({
+
+        withdrawer: hacker.publicKey,
+        withdrawerAta: hackerAta,
+        protocolMint,
+        config,
+        vault,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+      }).signers([hacker]).rpc().then(confirmTx);
+
+
+    } catch(err) {
+
+      return;
+    }
+
+    throw new Error("Hacker should not be able to withdraw w/o any protocol token balance in their wallet");
+
+  });
+
+  it("Transfer 0.5 protocol mint tokens to withdrawer", async () => {
+
+    const tx = await program.methods.initializeInheritance(finalSeed, finalInheritor.publicKey, finalInheritanceAmount, finalBountyAmount, finalInActicityTime)
+    .accountsStrict({
+      maker: maker.publicKey,
+      config,
+      vault,
+      protocolMint,
+      makerAta: makerAta1,
+      inheritance: finalInheritancePDA,
+      inheritanceVault: finalInheritanceVault,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+
+    }).signers([maker]).rpc().then(confirmTx);
+
+    const withdrawerAta = await getOrCreateAssociatedTokenAccount(anchor.getProvider().connection, maker, protocolMint, withdrawer.publicKey, false, undefined, undefined, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+
+    await transfer(anchor.getProvider().connection, maker, makerAta1, withdrawerAta.address, maker.publicKey, 2_000_000_000, [], undefined, TOKEN_2022_PROGRAM_ID);
 
   });
 
