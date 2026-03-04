@@ -53,6 +53,12 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const withdrawer = Keypair.generate();
 
+  const hacker = Keypair.generate();
+
+  const hackerInheritor = Keypair.generate();
+
+  const hackerInActivityTime = new anchor.BN(1);
+
   const inheritor1 = Keypair.generate();
 
   const inheritor2 = Keypair.generate();
@@ -139,9 +145,9 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   it("Airdrop", async () => {
 
-      await Promise.all([admin, maker, keeper, withdrawer].map(async (k) => {
+      await Promise.all([admin, maker, keeper, withdrawer, hacker].map(async (k) => {
 
-        const sig = await anchor.getProvider().connection.requestAirdrop(k.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
+        const sig = await anchor.getProvider().connection.requestAirdrop(k.publicKey, 100 * anchor.web3.LAMPORTS_PER_SOL);
 
         await anchor.getProvider().connection.confirmTransaction(sig, "confirmed");
       
@@ -669,6 +675,85 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
     }
 
     throw new Error("Should not be able to trigger an inheritance where the timer has not run out");
+
+  });
+
+  it("Trying to open a new inheritance by maker for inheritor that was triggered previously", async () => {
+
+    const tx = await program.methods.initializeInheritance(seed2, inheritor2.publicKey, inheritanceAmount1, bountyAmount1, inactivityTime1)
+    .accountsStrict({
+      maker: maker.publicKey,
+      config,
+      vault,
+      protocolMint,
+      makerAta: makerAta1,
+      inheritance: inheritancePDA3,
+      inheritanceVault: inheritanceVault3,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
+  });
+
+  it("Trying to check-in for an inheritance from a hacker", async () => {
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    try {
+
+      await program.methods.checkIn().accountsStrict({
+        maker: maker.publicKey,
+        inheritance: inheritancePDA3,
+        config,
+        systemProgram: SystemProgram.programId
+      }).signers([hacker]).rpc().then(confirmTx);
+
+    } catch(err) {
+
+      return;
+    }
+
+    throw new Error("Should not be able to check-in for someone else's inheritance");
+
+  });
+
+  it("Hacker trying to change inheritor", async () => {
+
+    try {
+
+      await program.methods.changeInheritor(hackerInheritor.publicKey).accountsStrict({
+        maker: maker.publicKey,
+        inheritance: inheritancePDA3,
+        config,
+        systemProgram: SystemProgram.programId
+      }).signers([hacker]).rpc().then(confirmTx);
+
+    } catch(err) {
+
+      return;
+    }
+
+    throw new Error("Should not be able to change inheritor for someone else's inheritance");
+
+  });
+
+  it("Hacker trying to change inactivity time", async () => {
+
+    try {
+
+      await program.methods.changeInactivityTime(hackerInActivityTime).accountsStrict({
+        maker: maker.publicKey,
+        inheritance: inheritancePDA3,
+        config,
+        systemProgram: SystemProgram.programId
+      }).signers([hacker]).rpc().then(confirmTx);
+
+    } catch(err) {
+
+      return;
+    }
+
+    throw new Error("Should not be able to change inactivity time for someone else's inheritance.");
 
   });
 
