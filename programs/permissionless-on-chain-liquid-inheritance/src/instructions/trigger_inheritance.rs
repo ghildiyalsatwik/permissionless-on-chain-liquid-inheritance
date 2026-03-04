@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
 use anchor_spl::{associated_token::AssociatedToken, token_interface::{Mint, TokenAccount, TokenInterface}, token_2022::{Burn, burn, ID as TOKEN_2022_PROGRAM_ID}};
 
-use crate::{errors::ProtocolError, state::{Config, Inheritance, Vault}, program::PermissionlessOnChainLiquidInheritance};
+use crate::{errors::ProtocolError, state::{Config, Inheritance, /*Vault*/}, program::PermissionlessOnChainLiquidInheritance};
 
 #[derive(Accounts)]
 pub struct TriggerInheritance<'info> {
@@ -9,7 +9,7 @@ pub struct TriggerInheritance<'info> {
     pub keeper: Signer<'info>,
     #[account(
         mut,
-        address = inheritance.inheritor.key() @ ProtocolError::InvalidInheritor
+        address = inheritance.initial_inheritor.key() @ ProtocolError::InvalidInheritor
     )]
     pub inheritor: SystemAccount<'info>,
     #[account(
@@ -39,9 +39,9 @@ pub struct TriggerInheritance<'info> {
     #[account(
         mut,
         seeds = [b"vault"],
-        bump = vault.bump
+        bump = config.vault_bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: SystemAccount<'info>,
     #[account(
         mut,
         seeds = [b"config"],
@@ -52,10 +52,16 @@ pub struct TriggerInheritance<'info> {
     #[account(
         mut,
         close = keeper,
-        seeds = [b"inheritance", inheritance.maker.key().as_ref(), inheritance.inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
+        seeds = [b"inheritance", inheritance.maker.key().as_ref(), inheritance.initial_inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
         bump = inheritance.bump
     )]
     pub inheritance: Account<'info, Inheritance>,
+    #[account(
+        mut,
+        seeds = [b"inheritance_vault", inheritance.key().as_ref()],
+        bump = inheritance.vault_bump
+    )]
+    pub inheritance_vault: SystemAccount<'info>,
     pub system_program: Program<'info, System>,
     #[account(
         constraint = token_program.key() == TOKEN_2022_PROGRAM_ID @ ProtocolError::InvalidTokenProgram     
@@ -115,27 +121,35 @@ impl<'info> TriggerInheritance<'info> {
             authority: self.config.to_account_info()
         };
 
-        let config_bump = &self.config.bump.to_le_bytes();
+        //let config_bump = &self.config.bump.to_le_bytes();
 
-        let config_signer_seeds: &[&[&[u8]]] = &[&[b"config"], &[config_bump.as_ref()]];
+        //let config_signer_seeds: &[&[&[u8]]] = &[&[b"config"], &[config_bump.as_ref()]];
+
+        let config_signer_seeds: &[&[&[u8]]] = &[&[b"config", &[self.config.bump]]];
 
         let cpi_ctx_1 = CpiContext::new_with_signer(cpi_program_1, cpi_accounts_1, config_signer_seeds);
 
         burn(cpi_ctx_1, final_shares)?;
 
-        let vault_bump = &self.vault.bump.to_le_bytes();
+        //let vault_bump = &self.config.vault_bump.to_le_bytes();
 
-        let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault"], &[vault_bump.as_ref()]];
+        //let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault"], &[vault_bump.as_ref()]];
 
-        let inheritance_bump = &self.inheritance.bump.to_le_bytes();
+        let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault", &[self.config.vault_bump]]];
 
-        let inheritance_maker_key = &self.inheritance.maker.key();
+        // let inheritance_bump = &self.inheritance.bump.to_le_bytes();
 
-        let inheritance_inheritor_key = &self.inheritance.inheritor.key();
+        // let inheritance_maker_key = &self.inheritance.maker.key();
 
-        let inheritance_account_seed = &self.inheritance.seed.to_le_bytes();
+        // let inheritance_inheritor_key = &self.inheritance.current_inheritor.key();
 
-        let inheritance_signer_seeds: &[&[&[u8]]] = &[&[b"inheritance", inheritance_maker_key.as_ref(), inheritance_inheritor_key.as_ref(), inheritance_account_seed.as_ref()], &[inheritance_bump.as_ref()]];
+        // let inheritance_account_seed = &self.inheritance.seed.to_le_bytes();
+
+        // let inheritance_signer_seeds: &[&[&[u8]]] = &[&[b"inheritance", inheritance_maker_key.as_ref(), inheritance_inheritor_key.as_ref(), inheritance_account_seed.as_ref()], &[inheritance_bump.as_ref()]];
+
+        let inheritance_key = &self.inheritance.key();
+
+        let inheritance_signer_seeds: &[&[&[u8]]] = &[&[b"inheritance_vault", inheritance_key.as_ref(), &[self.inheritance.vault_bump]]];
 
         let cpi_program_2 = self.system_program.to_account_info();
 
@@ -153,7 +167,7 @@ impl<'info> TriggerInheritance<'info> {
 
         let cpi_accounts_3 = Transfer {
 
-            from: self.inheritance.to_account_info(),
+            from: self.inheritance_vault.to_account_info(),
             to: self.keeper.to_account_info()
         };
 

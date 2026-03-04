@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
-use anchor_spl::{token_interface::{Mint, TokenAccount, TokenInterface}, associated_token::AssociatedToken, token_2022::{burn, Burn, ID as TOKEN_2022_PROGRAM_ID}};
+use anchor_spl::{token_interface::{Mint, TokenAccount, TokenInterface}, associated_token::AssociatedToken, token_2022::{burn, Burn, ID as TOKEN_2022_PROGRAM_ID, approve, Approve}};
 
-use crate::{errors::ProtocolError, state::{Config, Vault, Inheritance}};
+use crate::{errors::ProtocolError, state::{Config, /*Vault,*/ Inheritance}};
 
 #[derive(Accounts)]
 pub struct ReduceInheritance<'info> {
@@ -34,12 +34,12 @@ pub struct ReduceInheritance<'info> {
     #[account(
         mut,
         seeds = [b"vault"],
-        bump = vault.bump
+        bump = config.vault_bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: SystemAccount<'info>,
     #[account(
         mut,
-        seeds = [b"inheritance", maker.key().as_ref(), inheritance.inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
+        seeds = [b"inheritance", maker.key().as_ref(), inheritance.initial_inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
         bump = inheritance.bump
     )]
     pub inheritance: Account<'info, Inheritance>,
@@ -96,9 +96,9 @@ impl<'info> ReduceInheritance<'info> {
 
         let cpi_program_1 = self.token_program.to_account_info();
 
-        let config_bump = &self.config.bump.to_le_bytes();
+        //let config_bump = &self.config.bump.to_le_bytes();
 
-        let config_signer_seeds: &[&[&[u8]]]= &[&[b"config"], &[config_bump.as_ref()]];
+        let config_signer_seeds: &[&[&[u8]]] = &[&[b"config", &[self.config.bump]]];
 
         let cpi_accounts_1 = Burn {
 
@@ -111,9 +111,9 @@ impl<'info> ReduceInheritance<'info> {
 
         burn(cpi_ctx_1, tokens_to_burn)?;
 
-        let vault_bump = &self.vault.bump.to_le_bytes();
+        //let vault_bump = &self.vault.bump.to_le_bytes();
 
-        let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault"], &[vault_bump.as_ref()]];
+        let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault", &[self.config.vault_bump]]];
 
         let cpi_program_2 = self.system_program.to_account_info();
 
@@ -127,9 +127,25 @@ impl<'info> ReduceInheritance<'info> {
 
         transfer(cpi_ctx_2, amount)?;
 
+        let cpi_program_3 = self.token_program.to_account_info();
+
+        let cpi_accounts_3 = Approve {
+
+            to: self.maker_ata.to_account_info(),
+            delegate: self.config.to_account_info(),
+            authority: self.maker.to_account_info()
+
+        };
+
+        let cpi_ctx_3 = CpiContext::new(cpi_program_3, cpi_accounts_3);
+
+        approve(cpi_ctx_3, self.inheritance.shares - tokens_to_burn)?;
+
         self.inheritance.inheritance_amount -= amount;
 
         self.config.amount_locked -= amount;
+
+        self.inheritance.shares -= tokens_to_burn;
 
         Ok(())
     }

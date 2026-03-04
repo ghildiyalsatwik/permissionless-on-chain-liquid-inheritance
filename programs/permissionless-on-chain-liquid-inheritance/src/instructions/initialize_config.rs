@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{token_2022::ID as TOKEN_2022_PROGRAM_ID, token_interface::{Mint, TokenInterface}};
 
-use crate::{errors::ProtocolError, program::PermissionlessOnChainLiquidInheritance, state::{Config, Vault}};
+use crate::{errors::ProtocolError, program::PermissionlessOnChainLiquidInheritance, state::{Config, /*Vault*/}};
 
 #[derive(Accounts)]
 pub struct InitializeAdmin<'info> {
@@ -29,13 +29,13 @@ pub struct InitializeAdmin<'info> {
     )]
     pub config: Account<'info, Config>,
     #[account(
-        init,
-        payer = admin,
-        space = Vault::DISCRIMINATOR.len() + Vault::INIT_SPACE,
+        //init,
+        //payer = admin,
+        //space = Vault::DISCRIMINATOR.len() + Vault::INIT_SPACE,
         seeds = [b"vault"],
         bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: SystemAccount<'info>,
     #[account(
         constraint = this_program.programdata_address()? == Some(program_data.key()) @ ProtocolError::InvalidProgram 
     )]
@@ -53,12 +53,12 @@ impl<'info> InitializeAdmin<'info> {
 
     pub fn initialize_config(&mut self, bumps: InitializeAdminBumps, fees: u64) -> Result<()> {
 
-        self.config.set_inner(Config { fees: (fees), amount_locked: (0), burned: (0), mint: (self.protocol_mint.key()), vault: (self.vault.key()), locked: false, bump: (bumps.config), mint_bump: (bumps.protocol_mint) });
+        self.config.set_inner(Config { fees: (fees), amount_locked: (0), burned: (0), mint: (self.protocol_mint.key()), vault: (self.vault.key()), locked: false, bump: (bumps.config), mint_bump: (bumps.protocol_mint), vault_bump: (bumps.vault) });
 
-        self.vault.set_inner(Vault {
+        // self.vault.set_inner(Vault {
 
-            bump: bumps.vault
-        });
+        //     bump: bumps.vault
+        // });
 
         Ok(())
     }

@@ -11,7 +11,7 @@ pub struct ChangeInheritor<'info> {
     pub maker: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"inheritance", maker.key().as_ref(), inheritance.inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
+        seeds = [b"inheritance", maker.key().as_ref(), inheritance.initial_inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
         bump = inheritance.bump
     )]
     pub inheritance: Account<'info, Inheritance>,
@@ -41,7 +41,7 @@ impl<'info> ChangeInheritor<'info> {
 
         self.inheritance.last_check_in = now;
 
-        self.inheritance.inheritor = inheritor;
+        self.inheritance.current_inheritor = inheritor;
 
         Ok(())
 

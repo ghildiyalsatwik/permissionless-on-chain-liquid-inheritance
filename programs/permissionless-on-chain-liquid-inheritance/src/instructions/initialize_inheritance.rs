@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
 use anchor_spl::{associated_token::AssociatedToken, token_2022::{Approve, MintTo, approve, mint_to, ID as TOKEN_2022_PROGRAM_ID}, token_interface::{Mint, TokenInterface, TokenAccount}};
 
-use crate::{state::{Inheritance, Config, Vault}, errors::ProtocolError};
+use crate::{state::{Inheritance, Config, /*Vault*/}, errors::ProtocolError};
 
 #[derive(Accounts)]
 #[instruction(seed: u64, inheritor: Pubkey)]
@@ -18,9 +18,9 @@ pub struct InitializeInheritance<'info> {
     #[account(
         mut,
         seeds = [b"vault"],
-        bump = vault.bump
+        bump = config.vault_bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: SystemAccount<'info>,
     #[account(
         mut,
         seeds = [b"mint"],
@@ -44,6 +44,12 @@ pub struct InitializeInheritance<'info> {
         bump
     )]
     pub inheritance: Account<'info, Inheritance>,
+    #[account(
+        mut,
+        seeds = [b"inheritance_vault", inheritance.key().as_ref()],
+        bump
+    )]
+    pub inheritance_vault: SystemAccount<'info>,
     pub system_program: Program<'info, System>,
     #[account(
         constraint = token_program.key() == TOKEN_2022_PROGRAM_ID @ ProtocolError::InvalidTokenProgram     
@@ -79,7 +85,7 @@ impl<'info> InitializeInheritance <'info> {
         let cpi_2_accounts = Transfer {
 
             from: self.maker.to_account_info(),
-            to: self.inheritance.to_account_info(),
+            to: self.inheritance_vault.to_account_info(),
         };
 
         let cpi_2_ctx = CpiContext::new(cpi_program_2, cpi_2_accounts);
@@ -104,7 +110,7 @@ impl<'info> InitializeInheritance <'info> {
 
         let mint_amount = Inheritance::calculate_token_to_mint(inheritance_amount, amount_locked_before, self.protocol_mint.supply)?;
 
-        self.inheritance.set_inner(Inheritance { maker: (self.maker.key()), seed, inheritor, inheritance_amount, bounty_amount, inactivity_time, last_check_in: (now), shares: (mint_amount), bump: (bumps.inheritance) });
+        self.inheritance.set_inner(Inheritance { maker: (self.maker.key()), seed, initial_inheritor: inheritor, current_inheritor: inheritor, inheritance_amount, bounty_amount, inactivity_time, last_check_in: (now), shares: (mint_amount), bump: (bumps.inheritance), vault_bump: (bumps.inheritance_vault)});
 
         mint_to(cpi_3_ctx, mint_amount)?;
 

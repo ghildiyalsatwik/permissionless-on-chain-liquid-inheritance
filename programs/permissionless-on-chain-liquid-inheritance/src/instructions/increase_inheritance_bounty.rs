@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
 
-use crate::{errors::ProtocolError, state::{Vault, Inheritance, Config}};
+use crate::{errors::ProtocolError, state::{/*Vault,*/ Inheritance, Config}};
 
 #[derive(Accounts)]
 pub struct IncreaseInheritanceBounty<'info> {
@@ -11,13 +11,13 @@ pub struct IncreaseInheritanceBounty<'info> {
     pub maker: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"vault"],
-        bump = vault.bump
+        seeds = [b"inheritance_vault", inheritance.key().as_ref()],
+        bump = inheritance.vault_bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub inheritance_vault: SystemAccount<'info>,
     #[account(
         mut,
-        seeds = [b"inheritance", maker.key().as_ref(), inheritance.inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
+        seeds = [b"inheritance", maker.key().as_ref(), inheritance.initial_inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
         bump = inheritance.bump
     )]
     pub inheritance: Account<'info, Inheritance>,
@@ -54,7 +54,7 @@ impl<'info> IncreaseInheritanceBounty<'info> {
         let cpi_accounts = Transfer {
 
             from: self.maker.to_account_info(),
-            to: self.inheritance.to_account_info()
+            to: self.inheritance_vault.to_account_info()
         };
 
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);

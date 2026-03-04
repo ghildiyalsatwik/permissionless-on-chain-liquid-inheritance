@@ -10,5 +10,6 @@ pub struct Config {
     pub vault: Pubkey,
     pub locked: bool,
     pub bump: u8,
-    pub mint_bump: u8
+    pub mint_bump: u8,
+    pub vault_bump: u8
 }

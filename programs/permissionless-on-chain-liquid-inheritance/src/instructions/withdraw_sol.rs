@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
 use anchor_spl::{associated_token::AssociatedToken, token_2022::{Burn, ID as TOKEN_2022_PROGRAM_ID, burn}, token_interface::{Mint, TokenAccount, TokenInterface}};
 
-use crate::{errors::ProtocolError, state::{Config, Inheritance, Vault}};
+use crate::{errors::ProtocolError, state::{Config, Inheritance, /*Vault*/}};
 
 #[derive(Accounts)]
 pub struct WithdrawSol<'info> {
@@ -31,9 +31,9 @@ pub struct WithdrawSol<'info> {
     #[account(
         mut,
         seeds = [b"vault"],
-        bump = vault.bump
+        bump = config.vault_bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: SystemAccount<'info>,
     pub system_program: Program<'info, System>,
     #[account(
         constraint = token_program.key() == TOKEN_2022_PROGRAM_ID @ ProtocolError::InvalidTokenProgram
@@ -56,9 +56,9 @@ impl<'info> WithdrawSol<'info> {
             to: self.withdrawer.to_account_info()
         };
 
-        let vault_bump = &self.vault.bump.to_le_bytes();
+        //let vault_bump = &self.vault.bump.to_le_bytes();
 
-        let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault"], &[vault_bump.as_ref()]];
+        let vault_signer_seeds: &[&[&[u8]]] = &[&[b"vault", &[self.config.vault_bump]]];
 
         let cpi_ctx_1 = CpiContext::new_with_signer(cpi_program_1, cpi_accounts_1, vault_signer_seeds);
 

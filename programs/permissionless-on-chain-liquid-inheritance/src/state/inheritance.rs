@@ -7,13 +7,15 @@ use crate::errors::ProtocolError;
 pub struct Inheritance {
     pub maker: Pubkey,
     pub seed: u64,
-    pub inheritor: Pubkey,
+    pub initial_inheritor: Pubkey,
+    pub current_inheritor: Pubkey,
     pub inheritance_amount: u64,
     pub bounty_amount: u64,
     pub inactivity_time: u64,
     pub last_check_in: u64,
     pub shares: u64,
-    pub bump: u8
+    pub bump: u8,
+    pub vault_bump: u8
 }
 
 impl Inheritance {

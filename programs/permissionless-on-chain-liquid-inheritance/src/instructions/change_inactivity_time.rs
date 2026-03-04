@@ -11,7 +11,7 @@ pub struct ChangeInactivityTime<'info> {
     pub maker: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"inheritance", maker.key().as_ref(), inheritance.inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
+        seeds = [b"inheritance", maker.key().as_ref(), inheritance.initial_inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
         bump = inheritance.bump
     )]
     pub inheritance: Account<'info, Inheritance>,

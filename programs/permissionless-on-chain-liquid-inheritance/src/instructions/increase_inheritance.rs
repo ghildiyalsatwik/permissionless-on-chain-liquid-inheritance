@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}};
-use anchor_spl::{associated_token::AssociatedToken, token_2022::{MintTo, mint_to, ID as TOKEN_2022_PROGRAM_ID}, token_interface::{Mint, TokenAccount, TokenInterface}};
+use anchor_spl::{associated_token::AssociatedToken, token_2022::{MintTo, mint_to, ID as TOKEN_2022_PROGRAM_ID, Approve, approve}, token_interface::{Mint, TokenAccount, TokenInterface}};
 
-use crate::{errors::ProtocolError, state::{Inheritance, Vault, Config}};
+use crate::{errors::ProtocolError, state::{Inheritance, /*Vault,*/ Config}};
 
 #[derive(Accounts)]
 pub struct IncreaseInheritance<'info> {
@@ -34,15 +34,20 @@ pub struct IncreaseInheritance<'info> {
     #[account(
         mut,
         seeds = [b"vault"],
-        bump = vault.bump
+        bump = config.vault_bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: SystemAccount<'info>,
     #[account(
         mut,
-        seeds = [b"inheritance", maker.key().as_ref(), inheritance.inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
+        seeds = [b"inheritance", maker.key().as_ref(), inheritance.initial_inheritor.key().as_ref(), inheritance.seed.to_le_bytes().as_ref()],
         bump = inheritance.bump
     )]
     pub inheritance: Account<'info, Inheritance>,
+    // #[account(
+    //     seeds = [b"inheritance_vault", inheritance.key().as_ref()],
+    //     bump = inheritance.vault_bump
+    // )]
+    // pub inheritance_vault: SystemAccount<'info>,
     pub system_program: Program<'info, System>,
     #[account(
         constraint = token_program.key() == TOKEN_2022_PROGRAM_ID @ ProtocolError::InvalidTokenProgram     
@@ -84,9 +89,9 @@ impl<'info> IncreaseInheritance<'info> {
 
         let cpi_program_2 = self.token_program.to_account_info();
 
-        let config_bump = &self.config.bump.to_le_bytes();
+        //let config_bump = &self.config.bump.to_le_bytes();
 
-        let config_signer_seeds: &[&[&[u8]]] = &[&[b"config"], &[config_bump.as_ref()]];
+        let config_signer_seeds: &[&[&[u8]]] = &[&[b"config", &[self.config.bump]]];
 
         let cpi_accounts_2 = MintTo {
 
@@ -98,6 +103,20 @@ impl<'info> IncreaseInheritance<'info> {
         let cpi_ctx_2 = CpiContext::new_with_signer(cpi_program_2, cpi_accounts_2, config_signer_seeds);
 
         mint_to(cpi_ctx_2, tokens_to_mint)?;
+
+        let cpi_program_3 = self.token_program.to_account_info();
+
+        let cpi_accounts_3 = Approve {
+            
+            to: self.maker_ata.to_account_info(),
+            delegate: self.config.to_account_info(),
+            authority: self.maker.to_account_info()
+
+        };
+
+        let cpi_ctx_3 = CpiContext::new(cpi_program_3, cpi_accounts_3);
+
+        approve(cpi_ctx_3, tokens_to_mint)?;
 
         self.config.amount_locked += amount;
 

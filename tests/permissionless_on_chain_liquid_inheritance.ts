@@ -1,8 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PermissionlessOnChainLiquidInheritance } from "../target/types/permissionless_on_chain_liquid_inheritance";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddressSync, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 const confirmTx = async (signature: string): Promise<string> => {
 
@@ -47,6 +47,34 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const programData = PublicKey.findProgramAddressSync([program.programId.toBuffer()], BPF_LOADER_UPGRADEABLE_PROGRAM_ID)[0];
 
+  const maker = Keypair.generate();
+
+  const inheritor1 = Keypair.generate();
+
+  const inheritor1New = Keypair.generate();
+
+  const seed1 = new anchor.BN(0);
+
+  const inactivityTime1 = new anchor.BN(60 * 60 * 24);
+
+  const inactivityTime1New = new anchor.BN(60 * 60 * 24 * 2);
+
+  const inheritanceAmount1 = new anchor.BN(1_000_000_000);
+
+  const inheritanceAmount1ToAdd = new anchor.BN(1_000_000_000);
+
+  const inhertianceAmount1ToRemove = new anchor.BN(1_000_000_000);
+
+  const bountyAmount1 = new anchor.BN(100_000_000);
+
+  const bountyAmount1New = new anchor.BN(200_000_000);
+
+  const inheritancePDA1 = PublicKey.findProgramAddressSync([Buffer.from("inheritance"), maker.publicKey.toBuffer(), inheritor1.publicKey.toBuffer(), seed1.toArrayLike(Buffer, "le", 8)], program.programId)[0];
+
+  const inheritanceVault1 = PublicKey.findProgramAddressSync([Buffer.from("inheritance_vault"), inheritancePDA1.toBuffer()], program.programId)[0];
+
+  const makerAta1 = getAssociatedTokenAddressSync(protocolMint, maker.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+
   it("Program Data Account exists with upgrade authority", async () => {
 
     const programDataInfo = await provider.connection.getAccountInfo(programData);
@@ -87,9 +115,9 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   it("Airdrop", async () => {
 
-      await Promise.all([admin].map(async (k) => {
+      await Promise.all([admin, maker].map(async (k) => {
 
-        const sig = await anchor.getProvider().connection.requestAirdrop(k.publicKey, 3000 * anchor.web3.LAMPORTS_PER_SOL);
+        const sig = await anchor.getProvider().connection.requestAirdrop(k.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
 
         await anchor.getProvider().connection.confirmTransaction(sig, "confirmed");
       
@@ -208,6 +236,126 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
       config,
       systemProgram: SystemProgram.programId
     }).rpc().then(confirmTx);
+
+  });
+
+  it("Initialize first inheritance", async () => {
+
+    const tx = await program.methods.initializeInheritance(seed1, inheritor1.publicKey, inheritanceAmount1, bountyAmount1, inactivityTime1)
+    .accountsStrict({
+      maker: maker.publicKey,
+      config,
+      vault,
+      protocolMint,
+      makerAta: makerAta1,
+      inheritance: inheritancePDA1,
+      inheritanceVault: inheritanceVault1,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
+  it("Check in, first inheritance", async () => {
+
+    const tx = await program.methods.checkIn().accountsStrict({
+      maker: maker.publicKey,
+      inheritance: inheritancePDA1,
+      config,
+      systemProgram: SystemProgram.programId
+    }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
+  it("Change inheritor, first inheritance", async () => {
+
+    const tx = await program.methods.changeInheritor(inheritor1New.publicKey).accountsStrict({
+      maker: maker.publicKey,
+      inheritance: inheritancePDA1,
+      config,
+      systemProgram: SystemProgram.programId
+    }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
+  it("Change inactivity time, first inheritance", async () => {
+
+    const tx = await program.methods.changeInactivityTime(inactivityTime1New).accountsStrict({
+      maker: maker.publicKey,
+      inheritance: inheritancePDA1,
+      config,
+      systemProgram: SystemProgram.programId
+    }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
+  it("Increase inheritance bounty, first inheritance", async () => {
+
+    const tx = await program.methods.increaseInheritanceBounty(bountyAmount1New).accountsStrict({
+      maker: maker.publicKey,
+      inheritanceVault: inheritanceVault1,
+      inheritance: inheritancePDA1,
+      config,
+      systemProgram: SystemProgram.programId
+    }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
+  it("Decrease inheritance equal to current locked amount, first inheritance", async () => {
+
+    try {
+      
+      await program.methods.reduceInheritance(inhertianceAmount1ToRemove).accountsStrict({
+      maker: maker.publicKey,
+      makerAta: makerAta1,
+      protocolMint: protocolMint,
+      config,
+      vault,
+      inheritance: inheritancePDA1,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
+
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Should not be able to reduce inheritance by current locked amount, instruction for doing so is close inheritance.");
+
+  });
+
+  it("Increase inheritance, first inheritance", async () => {
+
+    const tx = await program.methods.increaseInheritance(inheritanceAmount1ToAdd).accountsStrict({
+      maker: maker.publicKey,
+      makerAta: makerAta1,
+      protocolMint: protocolMint,
+      config,
+      vault,
+      inheritance: inheritancePDA1,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
+  it("Decrease inheritance, first inheritance", async () => {
+
+    const tx = await program.methods.reduceInheritance(inhertianceAmount1ToRemove).accountsStrict({
+      maker: maker.publicKey,
+      makerAta: makerAta1,
+      protocolMint: protocolMint,
+      config,
+      vault,
+      inheritance: inheritancePDA1,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
 
   });
 
