@@ -51,11 +51,17 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const inheritor1 = Keypair.generate();
 
+  const inheritor2 = Keypair.generate();
+
   const inheritor1New = Keypair.generate();
 
   const seed1 = new anchor.BN(0);
 
+  const seed2 = new anchor.BN(0);
+
   const inactivityTime1 = new anchor.BN(60 * 60 * 24);
+
+  const inactivityTime2 = new anchor.BN(1);
 
   const inactivityTime1New = new anchor.BN(60 * 60 * 24 * 2);
 
@@ -72,6 +78,14 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
   const inheritancePDA1 = PublicKey.findProgramAddressSync([Buffer.from("inheritance"), maker.publicKey.toBuffer(), inheritor1.publicKey.toBuffer(), seed1.toArrayLike(Buffer, "le", 8)], program.programId)[0];
 
   const inheritanceVault1 = PublicKey.findProgramAddressSync([Buffer.from("inheritance_vault"), inheritancePDA1.toBuffer()], program.programId)[0];
+
+  const inheritancePDA2 = PublicKey.findProgramAddressSync([Buffer.from("inheritance"), maker.publicKey.toBuffer(), inheritor1.publicKey.toBuffer(), seed2.toArrayLike(Buffer, "le", 8)], program.programId)[0];
+
+  const inheritanceVault2 = PublicKey.findProgramAddressSync([Buffer.from("inheritance_vault"), inheritancePDA2.toBuffer()], program.programId)[0];
+
+  const inheritancePDA3 = PublicKey.findProgramAddressSync([Buffer.from("inheritance"), maker.publicKey.toBuffer(), inheritor2.publicKey.toBuffer(), seed2.toArrayLike(Buffer, "le", 8)], program.programId)[0];
+
+  const inheritanceVault3 = PublicKey.findProgramAddressSync([Buffer.from("inheritance_vault"), inheritancePDA3.toBuffer()], program.programId)[0];
 
   const makerAta1 = getAssociatedTokenAddressSync(protocolMint, maker.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 
@@ -373,6 +387,125 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
       tokenProgram: TOKEN_2022_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
     }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
+  it("Initializing second inheritance with same maker and inheritor", async () => {
+
+    const tx = await program.methods.initializeInheritance(seed2, inheritor1.publicKey, inheritanceAmount1, bountyAmount1, inactivityTime1)
+    .accountsStrict({
+      maker: maker.publicKey,
+      config,
+      vault,
+      protocolMint,
+      makerAta: makerAta1,
+      inheritance: inheritancePDA2,
+      inheritanceVault: inheritanceVault2,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
+
+  });
+
+  it("Initializing first inheritance with second inheritor", async () => {
+
+    const tx = await program.methods.initializeInheritance(seed2, inheritor2.publicKey, inheritanceAmount1, bountyAmount1, inactivityTime2)
+    .accountsStrict({
+      maker: maker.publicKey,
+      config,
+      vault,
+      protocolMint,
+      makerAta: makerAta1,
+      inheritance: inheritancePDA3,
+      inheritanceVault: inheritanceVault3,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+    }).signers([maker]).rpc().then(confirmTx);
+    
+  });
+
+  it("Trying to check-in with an inheritance where the timer has run out", async () => {
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    try {
+      
+      await program.methods.checkIn().accountsStrict({
+      maker: maker.publicKey,
+      inheritance: inheritancePDA3,
+      config,
+      systemProgram: SystemProgram.programId
+    }).signers([maker]).rpc().then(confirmTx);
+
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Should not be able to check-in for an inheritance where the timer has run out");
+
+  });
+
+  it("Trying to change inactivity time for an inheritance where the timer has run out", async () => {
+
+    try {
+      
+      await program.methods.changeInactivityTime(inactivityTime1New).accountsStrict({
+        maker: maker.publicKey,
+        inheritance: inheritancePDA3,
+        config,
+        systemProgram: SystemProgram.programId
+      }).signers([maker]).rpc().then(confirmTx);
+
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Should not be able to change inactivity time for an inheritance where the timer has run out");
+
+  });
+
+  it("Trying to change inheritor for an inheritance where the timer has run out", async () => {
+
+    try {
+      
+      await program.methods.changeInheritor(inheritor1New.publicKey).accountsStrict({
+        maker: maker.publicKey,
+        inheritance: inheritancePDA3,
+        config,
+        systemProgram: SystemProgram.programId
+      }).signers([maker]).rpc().then(confirmTx);
+
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Should not be able to change inheritor for an inheritance where the timer has run out");
+
+  });
+
+  it("Trying to increase inheritance bounty for an inheritance where the timer has run out", async () => {
+
+    try {
+      
+      await program.methods.increaseInheritanceBounty(bountyAmount1New).accountsStrict({
+        maker: maker.publicKey,
+        inheritanceVault: inheritanceVault3,
+        inheritance: inheritancePDA3,
+        config,
+        systemProgram: SystemProgram.programId
+      }).signers([maker]).rpc().then(confirmTx);
+
+  } catch(err) {
+
+    return;
+  }
+
+  throw new Error("Should not be able to increase inheritance bounty for an inheritance where the timer has run out");
 
   });
 
