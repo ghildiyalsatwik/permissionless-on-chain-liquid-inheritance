@@ -53,6 +53,8 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
   const withdrawer = Keypair.generate();
 
+  let withdrawerAta = getAssociatedTokenAddressSync(protocolMint, withdrawer.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+
   const hacker = Keypair.generate();
 
   const hackerInheritor = Keypair.generate();
@@ -839,9 +841,134 @@ describe("permissionless-on-chain-liquid-inheritance", () => {
 
     }).signers([maker]).rpc().then(confirmTx);
 
-    const withdrawerAta = await getOrCreateAssociatedTokenAccount(anchor.getProvider().connection, maker, protocolMint, withdrawer.publicKey, false, undefined, undefined, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    const withdrawerATA = await getOrCreateAssociatedTokenAccount(anchor.getProvider().connection, maker, protocolMint, withdrawer.publicKey, false, undefined, undefined, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 
-    await transfer(anchor.getProvider().connection, maker, makerAta1, withdrawerAta.address, maker.publicKey, 2_000_000_000, [], undefined, TOKEN_2022_PROGRAM_ID);
+    await transfer(anchor.getProvider().connection, maker, makerAta1, withdrawerATA.address, maker.publicKey, 2_000_000_000, [], undefined, TOKEN_2022_PROGRAM_ID);
+
+  });
+
+  it("Trying to withdraw incorrect amount", async () => {
+
+    try {
+      
+      await program.methods.withdrawSol(new anchor.BN(5_000_000_000)).accountsStrict({
+
+        withdrawer: withdrawer.publicKey,
+        withdrawerAta,
+        protocolMint,
+        config,
+        vault,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+
+      }).signers([withdrawer]).rpc().then(confirmTx);
+
+    } catch(err) {
+
+      return;
+    }
+
+    throw new Error("Should not been able to withdraw more than balance.");
+
+  });
+
+  it("Withdraw before timer has run out", async () => {
+
+    await program.methods.checkIn().accountsStrict({
+      maker: maker.publicKey,
+      inheritance: finalInheritancePDA,
+      config,
+      systemProgram: SystemProgram.programId
+
+    }).signers([maker]).rpc().then(confirmTx);
+
+    const tx = await program.methods.withdrawSol(new anchor.BN(1_000_000_000)).accountsStrict({
+
+      withdrawer: withdrawer.publicKey,
+      withdrawerAta,
+      protocolMint,
+      config,
+      vault,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+
+    }).signers([withdrawer]).rpc().then(confirmTx);
+  });
+
+  it("Withdraw after timer has run out", async () => {
+
+    let flag = false;
+
+    await new Promise((resolve) => setTimeout(resolve, 12000));
+
+    try {
+      await program.methods.checkIn().accountsStrict({
+        maker: maker.publicKey,
+        inheritance: finalInheritancePDA,
+        config,
+        systemProgram: SystemProgram.programId
+  
+      }).signers([maker]).rpc().then(confirmTx);
+
+    } catch(err) {
+
+      flag = true;
+
+    }
+
+    if(flag === false) throw new Error("Should not have been able to check in after timer has run out");
+
+    const tx = await program.methods.withdrawSol(new anchor.BN(500_000_000)).accountsStrict({
+
+      withdrawer: withdrawer.publicKey,
+      withdrawerAta,
+      protocolMint,
+      config,
+      vault,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+
+    }).signers([withdrawer]).rpc().then(confirmTx);
+
+  });
+
+  it("Withdraw after triggered inheritance", async () => {
+
+    const tx = await program.methods.triggerInheritance().accountsStrict({
+
+      keeper: keeper.publicKey,
+      inheritor: finalInheritor.publicKey,
+      maker: maker.publicKey,
+      makerAta: makerAta1,
+      admin: admin.publicKey,
+      protocolMint,
+      vault,
+      config,
+      inheritance: finalInheritancePDA,
+      inheritanceVault: finalInheritanceVault,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedToken: ASSOCIATED_TOKEN_PROGRAM_ID,
+      programData,
+      thisProgram: program.programId
+
+    }).signers([keeper]).rpc().then(confirmTx);
+
+    await program.methods.withdrawSol(new anchor.BN(500_000_000)).accountsStrict({
+
+      withdrawer: withdrawer.publicKey,
+      withdrawerAta,
+      protocolMint,
+      config,
+      vault,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+
+    }).signers([withdrawer]).rpc().then(confirmTx);
 
   });
 
